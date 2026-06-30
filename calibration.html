@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>검교정 관리대장 | 계측기 리스트</title>
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#1b2330; --ink2:#5a6678; --ink3:#8a94a6;
+  --line:#e2e7ee; --line2:#eef2f6; --accent:#1f5fa8; --accent-soft:#e8f0fa;
+  /* alarm palette */
+  --c-exp:#b3261e; --c-exp-bg:#fdecea;
+  --c-30:#d4380d;  --c-30-bg:#fff1ec;
+  --c-60:#d48806;  --c-60-bg:#fff8e6;
+  --c-90:#1f6fb2;  --c-90-bg:#eaf3fb;
+  --c-ok:#2e7d46;  --c-ok-bg:#eaf6ee;
+  --c-na:#7a8392;  --c-na-bg:#f0f2f5;
+  --mono:"SFMono-Regular",ui-monospace,"D2Coding","Consolas",monospace;
+  --sans:"Pretendard","Pretendard Variable",-apple-system,"Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased;font-size:13px;line-height:1.45}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 22px 60px}
+
+/* Header */
+header.app{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:18px}
+.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.brand h1{font-size:21px;font-weight:800;letter-spacing:-.4px;margin:0}
+.brand .sub{font-size:12px;color:var(--ink2);font-weight:600}
+.brand .co{font-family:var(--mono);font-size:11px;color:var(--ink3);
+  letter-spacing:.5px;text-transform:uppercase}
+.meta{text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink2);line-height:1.7}
+.meta b{color:var(--ink);font-weight:700}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;cursor:pointer;transition:.12s;position:relative;overflow:hidden}
+.kpi:hover{border-color:var(--ink3);transform:translateY(-1px);box-shadow:0 4px 14px rgba(20,30,50,.06)}
+.kpi.active{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}
+.kpi .lab{font-size:11px;color:var(--ink2);font-weight:700;display:flex;align-items:center;gap:6px}
+.kpi .dot{width:8px;height:8px;border-radius:50%}
+.kpi .val{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-1px;margin-top:6px;line-height:1}
+.kpi .unit{font-size:11px;color:var(--ink3);font-weight:600;margin-left:3px}
+.kpi .bar{position:absolute;left:0;bottom:0;height:3px;width:100%}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tabs{display:inline-flex;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;padding:3px;gap:2px}
+.tab{border:0;background:transparent;font-family:var(--sans);font-size:12.5px;
+  font-weight:700;color:var(--ink2);padding:7px 15px;border-radius:7px;cursor:pointer;transition:.12s}
+.tab:hover{color:var(--ink)}
+.tab.active{background:var(--ink);color:#fff}
+.tab .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-left:5px}
+.spacer{flex:1}
+.search{position:relative}
+.search input{font-family:var(--sans);font-size:12.5px;border:1px solid var(--line);
+  border-radius:8px;padding:8px 12px 8px 32px;width:230px;background:var(--panel);color:var(--ink)}
+.search input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search svg{position:absolute;left:10px;top:9px;width:14px;height:14px;stroke:var(--ink3)}
+.btn{font-family:var(--sans);font-size:12.5px;font-weight:700;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);padding:8px 13px;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:.12s;white-space:nowrap}
+.btn:hover{border-color:var(--ink3)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* Table */
+.tablecard{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12px;min-width:1180px}
+thead th{background:#f7f9fb;color:var(--ink2);font-weight:700;text-align:left;
+  padding:10px 10px;border-bottom:1px solid var(--line);white-space:nowrap;
+  position:sticky;top:0;z-index:2;font-size:11.5px;letter-spacing:-.2px}
+thead th.c{text-align:center}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tbody tr:hover{background:#f9fbfd}
+tbody tr:last-child td{border-bottom:0}
+td.c{text-align:center}
+td.no{font-family:var(--mono);color:var(--ink3);text-align:center;font-size:11px}
+td.name{font-weight:700;min-width:130px}
+td.name small{display:block;font-weight:500;color:var(--ink3);font-size:11px;margin-top:1px}
+td.mono{font-family:var(--mono);font-size:11.5px;letter-spacing:-.2px;white-space:nowrap}
+td.maker{color:var(--ink2);font-weight:600}
+.disp{color:var(--c-exp);font-weight:700}
+
+/* status badge */
+.bdg{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;line-height:1.3}
+.bdg .d{width:7px;height:7px;border-radius:50%}
+.b-exp{background:var(--c-exp-bg);color:var(--c-exp)} .b-exp .d{background:var(--c-exp)}
+.b-30{background:var(--c-30-bg);color:var(--c-30)} .b-30 .d{background:var(--c-30)}
+.b-60{background:var(--c-60-bg);color:var(--c-60)} .b-60 .d{background:var(--c-60)}
+.b-90{background:var(--c-90-bg);color:var(--c-90)} .b-90 .d{background:var(--c-90)}
+.b-ok{background:var(--c-ok-bg);color:var(--c-ok)} .b-ok .d{background:var(--c-ok)}
+.b-na{background:var(--c-na-bg);color:var(--c-na)} .b-na .d{background:var(--c-na)}
+.dday{font-family:var(--mono);font-size:11px;color:var(--ink3);text-align:center;white-space:nowrap}
+
+td.act{text-align:right;white-space:nowrap}
+.ico{border:0;background:transparent;cursor:pointer;padding:5px;border-radius:6px;color:var(--ink3)}
+.ico:hover{background:var(--line2);color:var(--ink)}
+.ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;display:block}
+.empty{padding:50px;text-align:center;color:var(--ink3)}
+
+/* footer legend */
+.legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:14px;
+  font-size:11.5px;color:var(--ink2);font-weight:600}
+.legend .item{display:flex;align-items:center;gap:6px}
+.legend .d{width:10px;height:10px;border-radius:3px}
+.foot{margin-top:18px;font-size:11px;color:var(--ink3);font-family:var(--mono);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(20,28,40,.45);display:none;
+  align-items:flex-start;justify-content:center;z-index:50;padding:40px 16px;overflow:auto}
+.scrim.on{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal h3{margin:0;padding:18px 22px;border-bottom:1px solid var(--line);font-size:15px;font-weight:800}
+.form{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld.full{grid-column:1/-1}
+.fld label{font-size:11px;font-weight:700;color:var(--ink2)}
+.fld input{font-family:var(--sans);font-size:13px;border:1px solid var(--line);
+  border-radius:7px;padding:8px 10px;color:var(--ink)}
+.fld input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fld input[type=date]{font-family:var(--mono)}
+.mfoot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.mfoot .right{display:flex;gap:10px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.25s;z-index:80}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:900px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .form{grid-template-columns:1fr}
+  .search input{width:160px}
+}
+@media print{
+  body{background:#fff}
+  .toolbar,.kpi,.act,.ico,.foot .btn{display:none!important}
+  .kpis{display:none}
+  .tablecard{border:0}
+  thead th{position:static}
+  .wrap{max-width:none;padding:0}
+  table{min-width:0;font-size:10px}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <div class="brand">
+      <h1>검교정 관리대장</h1>
+      <span class="sub">계측기 리스트 · 검교정 임박 알림</span>
+      <span class="co">TAEJIN DITECH · MEASURING INSTRUMENT CALIBRATION</span>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs"></div>
+    <div class="spacer"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input id="q" placeholder="품명·기기번호·담당자·위치 검색">
+    </div>
+    <button class="btn" id="btnAdd"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>계측기 추가</button>
+    <button class="btn" id="btnXlsx"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>엑셀</button>
+    <button class="btn" id="btnPrint"><svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>인쇄</button>
+    <button class="btn" id="btnMail"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="none"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>알림 메일</button>
+    <button class="btn" id="btnMailCfg" title="알림 메일 설정"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </div>
+
+  <div class="tablecard">
+    <div class="tscroll">
+      <table>
+        <thead><tr>
+          <th class="c">번호</th>
+          <th>품 명 / 규 격</th>
+          <th>제조회사</th>
+          <th>기기번호</th>
+          <th class="c">구입일자</th>
+          <th class="c">현 검교정일자</th>
+          <th class="c">차기 검교정일자</th>
+          <th class="c">잔여</th>
+          <th class="c">알림</th>
+          <th>현재위치</th>
+          <th>담당자</th>
+          <th>비고</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">조건에 해당하는 계측기가 없습니다.</div>
+  </div>
+
+  <div class="legend">
+    <span style="font-weight:700;color:var(--ink)">검교정 임박 알림</span>
+    <span class="item"><span class="d" style="background:var(--c-exp)"></span>만료(기한 경과)</span>
+    <span class="item"><span class="d" style="background:var(--c-30)"></span>30일 이내</span>
+    <span class="item"><span class="d" style="background:var(--c-60)"></span>31~60일</span>
+    <span class="item"><span class="d" style="background:var(--c-90)"></span>61~90일</span>
+    <span class="item"><span class="d" style="background:var(--c-ok)"></span>90일 초과(정상)</span>
+    <span class="item"><span class="d" style="background:var(--c-na)"></span>미입력</span>
+  </div>
+
+  <div class="foot">
+    <span id="footinfo"></span>
+    <span>
+      <button class="btn" id="btnExport" style="font-size:11px;padding:5px 10px">데이터 백업(JSON)</button>
+      <button class="btn" id="btnReset" style="font-size:11px;padding:5px 10px">원본으로 초기화</button>
+    </span>
+  </div>
+</div>
+
+<!-- modal -->
+<div class="scrim" id="scrim">
+  <div class="modal">
+    <h3 id="mtitle">계측기 추가</h3>
+    <div class="form">
+      <div class="fld full"><label>품 명</label><input id="f_name" placeholder="예: 내외측 캘리퍼(디지털형)"></div>
+      <div class="fld"><label>규 격</label><input id="f_spec" placeholder="예: (0~200)mm/0.01mm"></div>
+      <div class="fld"><label>제조회사</label><input id="f_maker" placeholder="예: MITUTOYO"></div>
+      <div class="fld"><label>기기번호</label><input id="f_serial"></div>
+      <div class="fld"><label>구입일자</label><input id="f_buy" type="date"></div>
+      <div class="fld"><label>현 검교정일자</label><input id="f_calib" type="date"></div>
+      <div class="fld"><label>차기 검교정일자</label><input id="f_next" type="date"></div>
+      <div class="fld"><label>현재위치</label><input id="f_loc"></div>
+      <div class="fld"><label>담당자</label><input id="f_owner"></div>
+      <div class="fld"><label>폐기일자</label><input id="f_disposal" type="date"></div>
+      <div class="fld full"><label>비고</label><input id="f_remark"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="btnDel" style="color:var(--c-exp);border-color:#f3c9c5">삭제</button>
+      <div class="right">
+        <button class="btn" id="btnCancel">취소</button>
+        <button class="btn primary" id="btnSave">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- email settings modal -->
+<div class="scrim" id="mailScrim">
+  <div class="modal" style="max-width:560px">
+    <h3>알림 메일 설정 (EmailJS)</h3>
+    <div style="padding:16px 22px 4px;font-size:12px;color:var(--ink2);line-height:1.7">
+      HTML 안에서 직접 메일을 보내려면 무료 <b>EmailJS</b>가 필요합니다. 한 번만 설정하면 됩니다.<br>
+      ① <b>emailjs.com</b> 가입 → ② Email Services에서 본인 Gmail 연결(=Service ID) →
+      ③ Email Templates에서 템플릿 생성: 제목칸 <code>{{subject}}</code>, 받는사람칸 <code>{{to_email}}</code>,
+      내용칸에 <code>{{{message_html}}}</code>(중괄호 3개) 입력(=Template ID) →
+      ④ Account의 <b>Public Key</b> 복사. 아래에 붙여넣으세요. (이 브라우저에만 저장됩니다)
+    </div>
+    <div class="form" style="grid-template-columns:1fr">
+      <div class="fld"><label>Service ID</label><input id="m_svc" placeholder="service_xxxxxxx"></div>
+      <div class="fld"><label>Template ID</label><input id="m_tpl" placeholder="template_xxxxxxx"></div>
+      <div class="fld"><label>Public Key</label><input id="m_key" placeholder="공개 키"></div>
+      <div class="fld"><label>받는 사람 (쉼표로 여러 명)</label><input id="m_to" placeholder="kim@example.com, boss@example.com"></div>
+      <div class="fld"><label>임박 기준(일)</label><input id="m_days" type="number" value="30" min="1"></div>
+      <div class="fld" style="flex-direction:row;align-items:center;gap:8px;margin-top:2px">
+        <input id="m_auto" type="checkbox" style="width:16px;height:16px">
+        <label for="m_auto" style="font-size:12.5px">페이지 열 때 하루 1회 자동 발송 (임박 건이 있을 때만)</label>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="m_test" style="color:var(--accent);border-color:#bcd6ef">테스트 발송</button>
+      <div class="right">
+        <button class="btn" id="m_cancel">취소</button>
+        <button class="btn primary" id="m_save">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED = {"생산": [{"no": "1", "name": "내외측 캘리퍼(디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "14058732", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "47", "owner": "", "remark": "생산 심팩300톤(47)"}, {"no": "2", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A17051617", "buy": "2018-12-24", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "29", "owner": "", "remark": "생산 유성환"}, {"no": "3", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "15198080", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "32", "owner": "", "remark": "생산 윤애순"}, {"no": "4", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A15092695", "buy": "2018-02-01", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "B동  3호기 고성신"}, {"no": "5", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "15138133", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "35", "owner": "", "remark": "생산 정주은"}, {"no": "6", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A19257001", "buy": "2020-02-05", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "6", "owner": "", "remark": "생산 김태주"}, {"no": "7", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "HE20669", "buy": "2025-11-04", "disposal": "", "calib": "", "next": "", "loc": "6", "owner": "", "remark": "생산 김태주"}, {"no": "8", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A19193907", "buy": "2021-01-07", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "46", "owner": "", "remark": "심팩 300톤 46호기"}, {"no": "9", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A19193917", "buy": "2021-01-07", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "45", "owner": "", "remark": "심팩 300톤 45호기"}, {"no": "10", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJO8582", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "48", "owner": "", "remark": "생산 48호기"}, {"no": "11", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A18169813", "buy": "2020-08-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "4", "owner": "", "remark": "생산 정승옥"}, {"no": "12", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A19125220", "buy": "2021-06-22", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "37", "owner": "", "remark": "생산 왕석주"}, {"no": "13", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "B18190675", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "생산 한영숙"}, {"no": "14", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~150)mm/0.01mm", "maker": "MITUTOYO", "serial": "B21314667", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "1", "owner": "", "remark": "생산 하경자"}, {"no": "15", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~300)mm/0.01mm", "maker": "MITUTOYO", "serial": "0025003", "buy": "2022-06-03", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "생산 강창구부장님"}, {"no": "16", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJ08901", "buy": "2024-07-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "41", "owner": "", "remark": "생산 임혜종"}, {"no": "17", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJ08920", "buy": "2024-07-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "36", "owner": "", "remark": "생산 36호기"}, {"no": "18", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJ08587", "buy": "2024-07-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "49", "owner": "", "remark": "생산 49호기"}, {"no": "19", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~150)mm/0.01mm", "maker": "MITUTOYO", "serial": "13035828", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "49", "owner": "", "remark": "생산 강창구"}, {"no": "20", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19192728", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "37", "owner": "", "remark": "생산 39호기"}, {"no": "21", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "18017860", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "6", "owner": "", "remark": "생산 40호기"}, {"no": "22", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "13044029", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "생산 32호기"}, {"no": "23", "name": "디지털 게이지", "spec": "0~25.6mm(0.001mm)", "maker": "MITUTOYO", "serial": "23084201", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "35", "owner": "", "remark": "생산 34호기"}, {"no": "24", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "035610", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "34", "owner": "", "remark": "B동  28호기"}, {"no": "25", "name": "디지털 게이지", "spec": "0~50.8mm(0.001mm)", "maker": "MITUTOYO", "serial": "13106", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "1", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "26", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "17234365", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "37", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "27", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "13085269", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "37", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "28", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19025868", "buy": "2021-01-07", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "29", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19007455", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "38", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "30", "name": "게이지압용 압력계 (다이얼형)", "spec": "(0~1)Mpa", "maker": "", "serial": "NONE", "buy": "2022-10-25", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "B동 32호기 정주은"}, {"no": "31", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJ08906", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "43", "owner": "", "remark": "생산 세동 43호기"}, {"no": "32", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "23103131", "buy": "2024-07-15", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": "생산 41호기"}, {"no": "33", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19183308", "buy": "2024-10-11", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "40", "owner": "", "remark": "생산 내외경지그2호기"}, {"no": "34", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19164479", "buy": "2024-10-11", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "40", "owner": "", "remark": "생산 내외경지그2호기"}, {"no": "35", "name": "외측 마이크로미터 (디지털튜브형)", "spec": "0~25mm(0.001mm)", "maker": "MITUTOYO", "serial": "85111152", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "37", "owner": "", "remark": ""}, {"no": "36", "name": "다이얼 게이지", "spec": "0~10mm(0.01)mm", "maker": "MITUTOYO", "serial": "JAG235", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "41", "owner": "", "remark": ""}, {"no": "37", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "GJ08912", "buy": "2024-07-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2", "owner": "", "remark": "생산 2호기"}, {"no": "38", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19192660", "buy": "2024-08-20", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "", "owner": "", "remark": ""}, {"no": "39", "name": "외측마이크로미터 (디지털포인터형)", "spec": "0~25mm/0.01mm", "maker": "MITUTOYO", "serial": "63057680", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "28", "owner": "", "remark": ""}], "품질": [{"no": "1", "name": "전기식 지시저울", "spec": "25kg/5g", "maker": "CAS", "serial": "E18062901", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF ATC 이유선"}, {"no": "2", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "에이컴", "serial": "ACD60071", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF ATC 진정화"}, {"no": "3", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "A&D전자저울", "serial": "H19-22397", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF ATC 송경옥"}, {"no": "4", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "A&D전자저울", "serial": "H20-00030", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF ATC 김미선"}, {"no": "5", "name": "전기식 지시저울", "spec": "25kg/5g", "maker": "CAS", "serial": "CQE66", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF 씰 전귀옥"}, {"no": "6", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "A&D전자저울", "serial": "H20-00027", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF씰 서성자"}, {"no": "7", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "A&D전자저울", "serial": "H20-15361", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "2층검사실", "owner": "오윤정", "remark": "품질 SKF씰 차찬이"}, {"no": "8", "name": "전기식 지시저울", "spec": "2000g/0.1g", "maker": "CAS", "serial": "BM625", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "9", "name": "전기식 지시저울", "spec": "30kg/5g", "maker": "A&D전자저울", "serial": "H19-00051", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 2층 ATC 강란희"}, {"no": "10", "name": "삼차원 좌표 측정기", "spec": "CNC 자동(600)", "maker": "ABERLINK", "serial": "14135", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "11", "name": "삼차원 좌표 측정기", "spec": "수동", "maker": "ABERLINK", "serial": "14923", "buy": "2017-09-25", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "12", "name": "측정투영기", "spec": "V-16E", "maker": "NIKON", "serial": "14015", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "13", "name": "로크웰 경도시험기", "spec": "60kgf~150kgf", "maker": "DAEKYUNG TECH", "serial": "11-K1574", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "14", "name": "형상측정기", "spec": "0 ~100mm (C_3200)", "maker": "MITUTOYO", "serial": "300582409", "buy": "2024-11-29", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "15", "name": "형상측정기", "spec": "0 ~100mm (C_3200)", "maker": "MITUTOYO", "serial": "300572409", "buy": "2024-11-29", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "16", "name": "고강도 비커스경도기", "spec": "HV-112", "maker": "MITUTOYO", "serial": "B00021402", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "17", "name": "조도측정기", "spec": "SJ-410", "maker": "MITUTOYO", "serial": "000481704", "buy": "2017-07-18", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "18", "name": "비접촉", "spec": "", "maker": "MITUTOYO", "serial": "73966235", "buy": "2025-01-02", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "19", "name": "정밀정반", "spec": "2000*1000", "maker": "금성정밀계측기", "serial": "73966235", "buy": "2025-01-02", "disposal": "", "calib": "2025-07-16", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 측정실"}, {"no": "20", "name": "외측마이크로미터 (아날로그)", "spec": "0~25mm/0.01mm", "maker": "MITUTOYO", "serial": "09710", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "허미정", "remark": "품질 허미정"}, {"no": "21", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A19257010", "buy": "2020-02-05", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "김상기", "remark": "품질 김상기"}, {"no": "22", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A23168711", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "허미정", "remark": "품질 허미정"}, {"no": "23", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~300)mm/0.01mm", "maker": "MITUTOYO", "serial": "0025046", "buy": "2022-06-03", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "허미정", "remark": "품질 허미정"}, {"no": "24", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "B23037007", "buy": "2023-06-12", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "문수진", "remark": "품질 문수진"}, {"no": "25", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "B23036977", "buy": "2023-06-12", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 문수진"}, {"no": "26", "name": "외측마이크로미터 (디지털포인터형)", "spec": "0~25mm/0.01mm", "maker": "MITUTOYO", "serial": "72037018", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 문수진"}, {"no": "27", "name": "높이 게이지 (디지털형)", "spec": "0~300mm(0.01mm)", "maker": "MITUTOYO", "serial": "0308446", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 문수진"}, {"no": "28", "name": "다이얼 게이지", "spec": "0.5mm/0.01mm", "maker": "MITUTOYO", "serial": "CMNH69", "buy": "2024-07-10", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 문수진"}, {"no": "29", "name": "인디게이터 (디지털형)", "spec": "12.7mm/0.001mm", "maker": "MITUTOYO", "serial": "18019184", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질 문수진"}, {"no": "30", "name": "인디게이터 (디지털형)", "spec": "25.4mm/0.001mm", "maker": "MITUTOYO", "serial": "18171804", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "품질팀 정반위 제일 많이 씀"}, {"no": "31", "name": "광조도계", "spec": "1332A", "maker": "TES", "serial": "140710687", "buy": "", "disposal": "", "calib": "2025-11-19", "next": "2026-11-19", "loc": "측정실", "owner": "오현민", "remark": "품질"}, {"no": "32", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19025860", "buy": "2021-01-07", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "여분"}, {"no": "33", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "19192676", "buy": "2024-08-20", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "여분"}, {"no": "34", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "HE20517", "buy": "2025-11-04", "disposal": "", "calib": "", "next": "", "loc": "측정실", "owner": "오현민", "remark": "여분"}, {"no": "35", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "Dasqua", "serial": "HE20477", "buy": "2025-11-04", "disposal": "", "calib": "", "next": "", "loc": "측정실", "owner": "오현민", "remark": "여분"}, {"no": "36", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "B23036986", "buy": "2021-01-07", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "여분"}, {"no": "-", "name": "전기식 지시저울", "spec": "252g/0.1mg", "maker": "A&D전자저울", "serial": "16009311", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "측정실", "owner": "오현민", "remark": "계단 밑 창고"}], "설계&개발": [{"no": "1", "name": "내외측캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A15106023", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "1층 사무실", "owner": "채은지", "remark": ""}, {"no": "2", "name": "내외측캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "18074916", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "1층 사무실", "owner": "이재성", "remark": ""}, {"no": "3", "name": "내외측캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "13033743", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "4", "name": "내외측캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "13458686", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발가공실", "owner": "이상철", "remark": ""}, {"no": "5", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "B23036976", "buy": "2023-06-12", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발가공실", "owner": "이성현", "remark": ""}, {"no": "6", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~200)mm/0.01mm", "maker": "MITUTOYO", "serial": "A23183350", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발가공실", "owner": "이성현", "remark": ""}, {"no": "7", "name": "내외측 캘리퍼 (아날로그)", "spec": "(0~300)mm/0.05mm", "maker": "MITUTOYO", "serial": "2197255", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "8", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~300)mm/0.01mm", "maker": "MITUTOYO", "serial": "0025045", "buy": "2022-06-03", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "1층사무실", "owner": "채은지", "remark": ""}, {"no": "9", "name": "외측마이크로미터 (디지털형)", "spec": "0~25mm(0.001mm)", "maker": "MITUTOYO", "serial": "20457134", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발가공실", "owner": "이성현", "remark": ""}, {"no": "10", "name": "외측마이크로미터 (디지털형)", "spec": "0~25mm(0.001mm)", "maker": "MITUTOYO", "serial": "55167160", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실안", "owner": "이성현", "remark": ""}, {"no": "11", "name": "외측마이크로미터 (포인터형)", "spec": "0~25mm(0.01mm)", "maker": "MITUTOYO", "serial": "71537237", "buy": "2022-10-31", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "12", "name": "외측마이크로미터 (아날로그)", "spec": "0~25mm(0.01mm)", "maker": "N S K", "serial": "HI2649", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "13", "name": "외측마이크로미터 (포인터형)(아날로그)", "spec": "0~25mm(0.01mm)", "maker": "MITUTOYO", "serial": "36077966", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "14", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "13033743", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "15", "name": "테스트 인디케이터", "spec": "1㎛", "maker": "MITUTOYO", "serial": "MNM483", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "16", "name": "테스트 인디케이터", "spec": "(0~0.8)mm/0.01mm", "maker": "MITUTOYO", "serial": "AUEX08", "buy": "2022-10-25", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "17", "name": "테스트 인디케이터", "spec": "(0~100)mm/0.01mm", "maker": "MITUTOYO", "serial": "RZU474", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "18", "name": "테스트 인디케이터", "spec": "1㎛", "maker": "MITUTOYO", "serial": "CKGG87", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발", "owner": "이상철", "remark": ""}, {"no": "19", "name": "테스트 인디케이터", "spec": "0.01", "maker": "MITUTOYO", "serial": "TUM717", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 선반", "owner": "이상철", "remark": ""}, {"no": "20", "name": "다이얼 게이지", "spec": "0~1mm(0.001mm)", "maker": "MITUTOYO", "serial": "CAZE67", "buy": "2023-02-02", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "임미정", "remark": ""}, {"no": "21", "name": "깊이 마이크로  미터", "spec": "0~25mm(0.001mm)", "maker": "MITUTOYO", "serial": "919679", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "22", "name": "높이 게이지 (디지털형)", "spec": "0~300mm(0.01mm)", "maker": "MITUTOYO", "serial": "0000547", "buy": "2022-10-25", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실앞정반", "owner": "이성현", "remark": ""}, {"no": "23", "name": "높이 게이지 (수동)", "spec": "300mm/0.01mm", "maker": "MITUTOYO", "serial": "0312924", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "24", "name": "디지털 게이지", "spec": "0~12.7mm(0.001mm)", "maker": "MITUTOYO", "serial": "23103126", "buy": "2024-07-15", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "25", "name": "테스트 인디케이터", "spec": "1㎛", "maker": "MITUTOYO", "serial": "BJAW15", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "26", "name": "외측마이크로미터 (아날로그)", "spec": "75~100mm(0.01mm)", "maker": "MITUTOYO", "serial": "HJ3067", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "27", "name": "내측마이크로미터 (디지털형)", "spec": "18~35mm", "maker": "MITUTOYO", "serial": "738640", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "28", "name": "내측마이크로미터 (디지털형)", "spec": "50~100", "maker": "MITUTOYO", "serial": "851139", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}, {"no": "29", "name": "내외측 캘리퍼 (디지털형)", "spec": "(0~300)mm/0.01mm", "maker": "MITUTOYO", "serial": "25003", "buy": "", "disposal": "", "calib": "2025-07-05", "next": "2026-07-05", "loc": "개발 가공실", "owner": "이성현", "remark": ""}]};
+const TEAMS = Object.keys(SEED);
+const STORE = "taejin_calib_v1";
+const todayISO = ()=>{const d=new Date();return d.toISOString().slice(0,10)};
+
+let DB = load();
+let curTeam = "전체";
+let curFilter = null;   // exp|d30|d60|d90|ok|na
+let curQuery = "";
+let editKey = null;     // {team,idx}
+
+function load(){
+  try{const r=localStorage.getItem(STORE);if(r)return JSON.parse(r);}catch(e){}
+  return JSON.parse(JSON.stringify(SEED));
+}
+function save(){
+  try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}
+}
+
+/* ---- status engine ---- */
+function daysLeft(nextStr){
+  if(!nextStr) return null;
+  const n=new Date(nextStr+"T00:00:00"), t=new Date(todayISO()+"T00:00:00");
+  return Math.round((n-t)/86400000);
+}
+function statusOf(rec){
+  if(rec.disposal) return {k:"disp",cls:"b-na",label:"폐기",d:null};
+  const d=daysLeft(rec.next);
+  if(d===null) return {k:"na",cls:"b-na",label:"미입력",d:null};
+  if(d<0)   return {k:"exp",cls:"b-exp",label:"만료",d};
+  if(d<=30) return {k:"d30",cls:"b-30",label:"30일 이내",d};
+  if(d<=60) return {k:"d60",cls:"b-60",label:"31~60일",d};
+  if(d<=90) return {k:"d90",cls:"b-90",label:"61~90일",d};
+  return {k:"ok",cls:"b-ok",label:"정상",d};
+}
+
+/* ---- data views ---- */
+function allRows(){
+  let out=[];
+  TEAMS.forEach(t=>{ if(curTeam!=="전체"&&curTeam!==t)return;
+    DB[t].forEach((r,i)=>out.push({...r,_team:t,_idx:i})); });
+  return out;
+}
+function filtered(){
+  const q=curQuery.trim().toLowerCase();
+  return allRows().filter(r=>{
+    if(curFilter){ const s=statusOf(r); if(s.k!==curFilter && !(curFilter==="exp"&&s.k==="disp")) return false; }
+    if(!q) return true;
+    return [r.name,r.spec,r.maker,r.serial,r.loc,r.owner,r.remark,r._team]
+      .some(v=>(v||"").toLowerCase().includes(q));
+  });
+}
+
+/* ---- render ---- */
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmtD(s){return s?s.replace(/-/g,"."):"";}
+
+function renderKpis(){
+  const rows=allRows();
+  const cnt={exp:0,d30:0,d60:0,d90:0,ok:0,na:0};
+  rows.forEach(r=>{const k=statusOf(r).k; if(k==="disp"){cnt.na++}else cnt[k]++;});
+  const defs=[
+    {k:null, lab:"총 보유", n:rows.length, color:"var(--ink)"},
+    {k:"exp",lab:"만료",    n:cnt.exp, color:"var(--c-exp)"},
+    {k:"d30",lab:"30일 이내",n:cnt.d30, color:"var(--c-30)"},
+    {k:"d60",lab:"31~60일", n:cnt.d60, color:"var(--c-60)"},
+    {k:"d90",lab:"61~90일", n:cnt.d90, color:"var(--c-90)"},
+    {k:"ok", lab:"정상/미입력",n:cnt.ok+cnt.na, color:"var(--c-ok)"},
+  ];
+  document.getElementById("kpis").innerHTML=defs.map(d=>`
+    <div class="kpi ${curFilter===d.k&&d.k!==null?'active':''}" data-k="${d.k}">
+      <div class="lab">${d.k?`<span class="dot" style="background:${d.color}"></span>`:""}${d.lab}</div>
+      <div class="val" style="color:${d.color}">${d.n}<span class="unit">대</span></div>
+      <div class="bar" style="background:${d.color};opacity:.25"></div>
+    </div>`).join("");
+  document.querySelectorAll(".kpi").forEach(el=>el.onclick=()=>{
+    const k=el.dataset.k; curFilter=(k==="null"||curFilter===k)?null:k; render();
+  });
+}
+
+function renderTabs(){
+  const tabs=[["전체",allRows0("전체")],...TEAMS.map(t=>[t,DB[t].length])];
+  document.getElementById("tabs").innerHTML=tabs.map(([t,n])=>`
+    <button class="tab ${curTeam===t?'active':''}" data-t="${t}">${t}<span class="n">${n}</span></button>`).join("");
+  document.querySelectorAll(".tab").forEach(el=>el.onclick=()=>{curTeam=el.dataset.t;curFilter=null;render();});
+}
+function allRows0(t){let n=0;TEAMS.forEach(x=>n+=DB[x].length);return n;}
+
+function renderRows(){
+  const list=filtered();
+  const tb=document.getElementById("rows");
+  document.getElementById("empty").style.display=list.length?"none":"block";
+  tb.innerHTML=list.map(r=>{
+    const s=statusOf(r);
+    const dtxt = s.d===null ? "—" : (s.d<0?`D+${-s.d}`:`D-${s.d}`);
+    return `<tr>
+      <td class="no">${esc(r.no)}</td>
+      <td class="name">${esc(r.name)}<small>${esc(r.spec)}</small></td>
+      <td class="maker">${esc(r.maker)}</td>
+      <td class="mono">${esc(r.serial)}</td>
+      <td class="c mono">${fmtD(r.buy)||'<span style="color:var(--ink3)">—</span>'}</td>
+      <td class="c mono">${fmtD(r.calib)||'—'}</td>
+      <td class="c mono" style="font-weight:700">${fmtD(r.next)||'—'}</td>
+      <td class="dday">${dtxt}</td>
+      <td class="c"><span class="bdg ${s.cls}"><span class="d"></span>${s.label}</span></td>
+      <td>${esc(r.loc)}</td>
+      <td style="font-weight:600">${esc(r.owner)}</td>
+      <td style="color:var(--ink2)">${esc(r.remark)}</td>
+      <td class="act"><button class="ico" data-t="${r._team}" data-i="${r._idx}" title="수정">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button></td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll(".ico").forEach(b=>b.onclick=()=>openEdit(b.dataset.t,+b.dataset.i));
+}
+
+function renderMeta(){
+  const rows=allRows();
+  const exp=rows.filter(r=>{const k=statusOf(r).k;return k==="exp"}).length;
+  const soon=rows.filter(r=>statusOf(r).k==="d30").length;
+  document.getElementById("meta").innerHTML=
+    `기준일 <b>${todayISO().replace(/-/g,".")}</b><br>총 <b>${rows.length}</b>대 · 만료 <b style="color:var(--c-exp)">${exp}</b> · 임박 <b style="color:var(--c-30)">${soon}</b>`;
+  document.getElementById("footinfo").textContent=
+    `표시 ${filtered().length} / 전체 ${rows.length}대 · 데이터는 이 브라우저에 자동 저장됩니다`;
+}
+
+function render(){renderKpis();renderTabs();renderRows();renderMeta();}
+
+/* ---- modal ---- */
+const $=id=>document.getElementById(id);
+function openAdd(){
+  editKey=null; $("mtitle").textContent="계측기 추가"; $("btnDel").style.display="none";
+  ["name","spec","maker","serial","buy","calib","next","loc","owner","disposal","remark"]
+    .forEach(k=>$("f_"+k).value="");
+  $("scrim").classList.add("on");
+}
+function openEdit(team,idx){
+  editKey={team,idx}; const r=DB[team][idx];
+  $("mtitle").textContent=`수정 · ${team} #${r.no}`; $("btnDel").style.display="inline-flex";
+  $("f_name").value=r.name||""; $("f_spec").value=r.spec||""; $("f_maker").value=r.maker||"";
+  $("f_serial").value=r.serial||""; $("f_buy").value=r.buy||""; $("f_calib").value=r.calib||"";
+  $("f_next").value=r.next||""; $("f_loc").value=r.loc||""; $("f_owner").value=r.owner||"";
+  $("f_disposal").value=r.disposal||""; $("f_remark").value=r.remark||"";
+  $("scrim").classList.add("on");
+}
+function closeModal(){$("scrim").classList.remove("on");}
+function gather(){
+  return {name:$("f_name").value.trim(),spec:$("f_spec").value.trim(),maker:$("f_maker").value.trim(),
+    serial:$("f_serial").value.trim(),buy:$("f_buy").value,disposal:$("f_disposal").value,
+    calib:$("f_calib").value,next:$("f_next").value,loc:$("f_loc").value.trim(),
+    owner:$("f_owner").value.trim(),remark:$("f_remark").value.trim()};
+}
+function saveRec(){
+  const v=gather();
+  if(!v.name){toast("품명을 입력하세요");return;}
+  if(editKey){
+    DB[editKey.team][editKey.idx]={...DB[editKey.team][editKey.idx],...v};
+    toast("수정되었습니다");
+  }else{
+    const team=curTeam==="전체"?TEAMS[0]:curTeam;
+    const no=String(DB[team].length+1);
+    DB[team].push({no,...v});
+    toast(`${team} 팀에 추가되었습니다`);
+  }
+  save();closeModal();render();
+}
+function delRec(){
+  if(!editKey)return;
+  if(!confirm("이 계측기를 삭제할까요?"))return;
+  DB[editKey.team].splice(editKey.idx,1);
+  DB[editKey.team].forEach((r,i)=>r.no=String(i+1));
+  save();closeModal();render();toast("삭제되었습니다");
+}
+
+/* ---- export ---- */
+function exportXlsx(){
+  // CSV (Excel 호환, UTF-8 BOM)
+  const head=["팀","번호","품명","규격","제조회사","기기번호","구입일자","폐기일자","현검교정일자","차기검교정일자","잔여(D)","알림상태","현재위치","담당자","비고"];
+  const lines=[head.join(",")];
+  filtered().forEach(r=>{
+    const s=statusOf(r);
+    const dd=s.d===null?"":s.d;
+    const cell=v=>`"${String(v||"").replace(/"/g,'""')}"`;
+    lines.push([r._team,r.no,r.name,r.spec,r.maker,r.serial,r.buy,r.disposal,r.calib,r.next,dd,s.label,r.loc,r.owner,r.remark].map(cell).join(","));
+  });
+  const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  dl(blob,`검교정관리대장_${todayISO()}.csv`);
+  toast("엑셀(CSV)로 내보냈습니다");
+}
+function exportJson(){
+  dl(new Blob([JSON.stringify(DB,null,1)],{type:"application/json"}),`검교정_백업_${todayISO()}.json`);
+  toast("백업 파일을 저장했습니다");
+}
+function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+
+function resetAll(){
+  if(!confirm("모든 변경사항을 지우고 원본 데이터로 되돌릴까요?"))return;
+  DB=JSON.parse(JSON.stringify(SEED));save();curFilter=null;curQuery="";$("q").value="";render();toast("원본으로 초기화했습니다");
+}
+
+let tmr;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove("show"),2200);}
+
+/* ---- wire ---- */
+$("btnAdd").onclick=openAdd; $("btnSave").onclick=saveRec; $("btnDel").onclick=delRec;
+$("btnCancel").onclick=closeModal; $("scrim").onclick=e=>{if(e.target.id==="scrim")closeModal();};
+$("btnXlsx").onclick=exportXlsx; $("btnExport").onclick=exportJson;
+$("btnPrint").onclick=()=>window.print(); $("btnReset").onclick=resetAll;
+$("q").oninput=e=>{curQuery=e.target.value;render();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+/* ============ 알림 메일 (EmailJS) ============ */
+const MAILCFG="taejin_calib_mail";
+function mailCfg(){try{return JSON.parse(localStorage.getItem(MAILCFG))||{};}catch(e){return {};}}
+function saveMailCfg(c){try{localStorage.setItem(MAILCFG,JSON.stringify(c));}catch(e){}}
+
+function imminentRows(days){
+  const t=new Date(todayISO()+"T00:00:00");
+  return allRowsEvery().map(r=>{
+    if(r.disposal||!r.next) return null;
+    const d=Math.round((new Date(r.next+"T00:00:00")-t)/86400000);
+    return d<=days ? {...r,days:d} : null;
+  }).filter(Boolean).sort((a,b)=>a.days-b.days);
+}
+function allRowsEvery(){let o=[];TEAMS.forEach(t=>DB[t].forEach(r=>o.push({...r,_team:t})));return o;}
+
+function buildMailHtml(rows,days){
+  const exp=rows.filter(r=>r.days<0).length, soon=rows.length-exp;
+  const td="padding:8px 10px;border-bottom:1px solid #eef2f6;font-size:12px";
+  const body=rows.map(r=>{
+    const s=statusOf(r); const dd=r.days<0?`D+${-r.days}`:(r.days===0?"D-DAY":`D-${r.days}`);
+    const col={exp:"#b3261e",d30:"#d4380d",d60:"#d48806",d90:"#1f6fb2",ok:"#2e7d46",na:"#7a8392"}[s.k]||"#1b2330";
+    const bg ={exp:"#fdecea",d30:"#fff1ec",d60:"#fff8e6",d90:"#eaf3fb",ok:"#eaf6ee",na:"#f0f2f5"}[s.k]||"#f0f2f5";
+    return `<tr>
+      <td style="${td};color:#5a6678;text-align:center">${esc(r._team)}</td>
+      <td style="${td};font-size:13px;font-weight:700;color:#1b2330">${esc(r.name)}<div style="font-weight:400;color:#8a94a6;font-size:11px">${esc(r.spec)}</div></td>
+      <td style="${td};font-family:monospace">${esc(r.serial)}</td>
+      <td style="${td}">${esc(r.owner)}</td>
+      <td style="${td};color:#5a6678">${esc(r.loc)}</td>
+      <td style="${td};font-family:monospace;font-weight:700;text-align:center">${fmtD(r.next)}</td>
+      <td style="${td};text-align:center"><span style="font-family:monospace;font-size:11px;font-weight:700;color:${col};background:${bg};padding:3px 9px;border-radius:20px">${dd} · ${s.label}</span></td>
+    </tr>`;}).join("");
+  const th=a=>`<th style="padding:9px 10px;font-size:11px;color:#5a6678;border-bottom:1px solid #e2e7ee;text-align:${a[1]}">${a[0]}</th>`;
+  const head=[["팀","center"],["품명 / 규격","left"],["기기번호","left"],["담당자","left"],["위치","left"],["차기검교정일","center"],["잔여 / 상태","center"]].map(th).join("");
+  return `<div style="font-family:'Malgun Gothic',sans-serif;max-width:760px">
+    <div style="background:#1b2330;color:#fff;padding:18px 22px;border-radius:12px 12px 0 0">
+      <div style="font-size:11px;letter-spacing:1px;color:#9aa6bb;font-family:monospace">TAEJIN DITECH · CALIBRATION ALERT</div>
+      <div style="font-size:19px;font-weight:800;margin-top:4px">검교정 임박 알림 (${days}일 이내)</div>
+      <div style="font-size:12px;color:#c3ccd9;margin-top:6px">기준일 ${todayISO().replace(/-/g,".")} · 만료 <b style="color:#ff8a7a">${exp}</b>건 · 임박 <b style="color:#ffc46b">${soon}</b>건</div>
+    </div>
+    <div style="border:1px solid #e2e7ee;border-top:0;border-radius:0 0 12px 12px;overflow:hidden">
+      <table style="border-collapse:collapse;width:100%"><thead><tr style="background:#f7f9fb">${head}</tr></thead><tbody>${body}</tbody></table>
+    </div></div>`;
+}
+
+async function sendMail(isTest){
+  const c=mailCfg();
+  if(!c.svc||!c.tpl||!c.key||!c.to){toast("먼저 알림 메일 설정을 입력하세요");openMailCfg();return;}
+  if(typeof emailjs==="undefined"){toast("EmailJS 로딩 실패(인터넷 연결 확인)");return;}
+  const days=+c.days||30;
+  const rows=imminentRows(days);
+  if(!rows.length && !isTest){toast(`${days}일 이내 임박 계측기가 없습니다`);return;}
+  const exp=rows.filter(r=>r.days<0).length, soon=rows.length-exp;
+  const params={
+    to_email:c.to,
+    subject:`[검교정 알림] 임박 ${soon}건 / 만료 ${exp}건 (${todayISO().slice(5).replace("-",".")})`,
+    message_html:rows.length?buildMailHtml(rows,days):`<p style="font-family:sans-serif">${todayISO().replace(/-/g,".")} 기준 ${days}일 이내 검교정 대상이 없습니다. (테스트 발송)</p>`
+  };
+  try{
+    emailjs.init({publicKey:c.key});
+    await emailjs.send(c.svc,c.tpl,params);
+    toast(isTest?"테스트 메일을 보냈습니다":`알림 메일 발송 완료 (${rows.length}건)`);
+    if(!isTest){try{localStorage.setItem("taejin_calib_lastmail",todayISO());}catch(e){}}
+  }catch(err){
+    console.error(err);
+    toast("발송 실패: "+(err?.text||err?.message||"설정 확인"));
+  }
+}
+
+function openMailCfg(){
+  const c=mailCfg();
+  $("m_svc").value=c.svc||"";$("m_tpl").value=c.tpl||"";$("m_key").value=c.key||"";
+  $("m_to").value=c.to||"";$("m_days").value=c.days||30;$("m_auto").checked=!!c.auto;
+  $("mailScrim").classList.add("on");
+}
+$("btnMailCfg").onclick=openMailCfg;
+$("btnMail").onclick=()=>sendMail(false);
+$("m_cancel").onclick=()=>$("mailScrim").classList.remove("on");
+$("mailScrim").onclick=e=>{if(e.target.id==="mailScrim")$("mailScrim").classList.remove("on");};
+$("m_test").onclick=()=>sendMail(true);
+$("m_save").onclick=()=>{
+  saveMailCfg({svc:$("m_svc").value.trim(),tpl:$("m_tpl").value.trim(),key:$("m_key").value.trim(),
+    to:$("m_to").value.trim(),days:+$("m_days").value||30,auto:$("m_auto").checked});
+  $("mailScrim").classList.remove("on");toast("알림 메일 설정을 저장했습니다");
+};
+
+/* 페이지 열 때 하루 1회 자동 발송 */
+function autoMailCheck(){
+  const c=mailCfg();
+  if(!c.auto||!c.svc||!c.tpl||!c.key||!c.to)return;
+  let last="";try{last=localStorage.getItem("taejin_calib_lastmail")||"";}catch(e){}
+  if(last===todayISO())return;              // 오늘 이미 보냄
+  if(imminentRows(+c.days||30).length) setTimeout(()=>sendMail(false),1200);
+}
+
+render();
+autoMailCheck();
+</script>
+</body>
+</html>
