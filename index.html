@@ -153,6 +153,7 @@ td.act{text-align:right;white-space:nowrap}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="wrap">
@@ -162,6 +163,7 @@ td.act{text-align:right;white-space:nowrap}
       <h1>검교정 관리대장</h1>
       <span class="sub">계측기 리스트 · 검교정 임박 알림</span>
       <span class="co">TAEJIN DITECH · MEASURING INSTRUMENT CALIBRATION</span>
+      <span id="syncDot" title="로컬 저장" style="width:9px;height:9px;border-radius:50%;background:#7a8392;display:inline-block;margin-left:2px"></span>
     </div>
     <div class="meta" id="meta"></div>
   </header>
@@ -292,6 +294,21 @@ const TEAMS = Object.keys(SEED);
 const STORE = "taejin_calib_v1";
 const todayISO = ()=>{const d=new Date();return d.toISOString().slice(0,10)};
 
+/* ===== Supabase 설정 ===== 
+   아래 두 줄에 Supabase 정보를 붙여넣으면 자동 연동됩니다.
+   (Supabase 대시보드 → Settings → API 에서 복사)
+   anon key 는 공개돼도 되는 키라 여기 넣어도 안전합니다(RLS로 보호). */
+const SUPA_URL = "https://ebthltdmxpzlkfwvdloz.supabase.co";   // 예: https://abcd1234.supabase.co
+const SUPA_KEY = "sb_publishable_ZSgcZapb7cTgFezGmOV_ow_9MT15SnS";
+const SUPA_DATAKEY = "calib:data";
+let supa = null, supaOK = false;
+try{
+  if(window.supabase && !SUPA_URL.startsWith("여기에") && !SUPA_KEY.startsWith("여기에")){
+    supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    supaOK = true;
+  }
+}catch(e){ console.warn("supabase init", e); }
+
 let DB = load();
 let curTeam = "전체";
 let curFilter = null;   // exp|d30|d60|d90|ok|na
@@ -304,6 +321,40 @@ function load(){
 }
 function save(){
   try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}
+  pushSupabase();   // 클라우드에도 저장 (있을 때만)
+}
+
+/* ---- Supabase 동기화 ---- */
+async function pullSupabase(){
+  if(!supaOK) return;
+  setSync("loading");
+  try{
+    const {data,error}=await supa.from("kv_store").select("value").eq("key",SUPA_DATAKEY).maybeSingle();
+    if(error) throw error;
+    if(data && data.value){
+      DB = typeof data.value==="string" ? JSON.parse(data.value) : data.value;
+      try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}
+      render();
+      setSync("ok");
+    }else{
+      await pushSupabase();   // 클라우드가 비어있으면 현재 데이터를 최초 업로드
+      setSync("ok");
+    }
+  }catch(e){ console.warn("pull",e); setSync("err"); }
+}
+async function pushSupabase(){
+  if(!supaOK) return;
+  setSync("loading");
+  try{
+    const {error}=await supa.from("kv_store").upsert({key:SUPA_DATAKEY,value:DB,updated_at:new Date().toISOString()},{onConflict:"key"});
+    if(error) throw error;
+    setSync("ok");
+  }catch(e){ console.warn("push",e); setSync("err"); }
+}
+function setSync(s){
+  const el=document.getElementById("syncDot"); if(!el)return;
+  const m={loading:["#d48806","동기화 중…"],ok:["#2e7d46","클라우드 동기화됨"],err:["#b3261e","동기화 오류"],off:["#7a8392","로컬 저장(클라우드 미연동)"]};
+  const [c,t]=m[s]||m.off; el.style.background=c; el.title=t; el.dataset.s=s;
 }
 
 /* ---- status engine ---- */
@@ -593,6 +644,7 @@ function autoMailCheck(){
 
 render();
 autoMailCheck();
+if(supaOK){ setSync("loading"); pullSupabase(); } else { setSync("off"); }
 </script>
 </body>
 </html>
